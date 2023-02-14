@@ -1,0 +1,197 @@
+version: "3"
+services:
+
+  emby:
+    image: lovechen/embyserver:latest
+    container_name: emby
+    environment:
+      - PUID=1026 # The UID to run emby as (default: 2)
+      - PGID=100 # The GID to run emby as (default 2)
+      - GIDLIST=100 # A comma-separated list of additional GIDs to run emby as (default: 2)
+      - HTTP_PROXY=http://192.168.2.3:7893/
+      - HTTPS_PROXY=http://192.168.2.3:7893/
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./emby:/config # Configuration directory
+      - /volume2/data:/data # Media directory
+      - /volume1/data1:/data1
+    ports:
+      - 8096:8096 # HTTP port
+      - 8920:8920 # HTTPS port
+    devices:
+      - /dev/dri:/dev/dri # VAAPI/NVDEC/NVENC render nodes
+    restart: unless-stopped
+  
+  qbittorrent:
+    image: linuxserver/qbittorrent
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: host
+    deploy:
+      resources:
+         limits:
+            memory: 4G
+    environment:
+      - PUID=1026 # 注意替换
+      - PGID=100  # 注意替换
+      - TZ=Asia/Shanghai
+      - WEBUI_PORT=8085 # QB webui的端口，你可以换成其他端口
+    volumes:
+      - ./qbittorrent:/config
+      - /volume2/data:/data   # 替换成你自己的下载文件夹
+      - /volume2/data/Downloads:/downloads
+      - /volume1/data1:/data1
+      - /volume1/data1/Downloads:/downloads1   # 替换成你自己的下载文件夹
+
+ ##     - /volume1/data2/Downloads:/downloads2   # 替换成你自己的下载文件夹
+  
+  prowlarr:
+    image: linuxserver/prowlarr:develop
+    container_name: prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=1026 # 注意替换
+      - PGID=100  # 注意替换
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./prowlarr:/config
+      - /volume2/data/Downloads:/downloads
+      - /volume1/data1/Downloads:/downloads1   # 替换成你自己的下载文件夹
+ ##     - /volume1/data2/Downloads:/downloads2 # 替换成你自己的第二个分区的下载文件夹
+    ports:
+      - 9696:9696
+           
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=1026 # 注意替换
+      - PGID=100  # 注意替换
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./radarr:/config
+      - /volume2:/volume1 # 注意这里不再是下载文件夹，需要是下载/电影/剧集文件夹的母文件夹
+   ##   - /volume1:/volume1 # 注意这里不再是下载文件夹，需要是下载/电影/剧集文件夹的母文件夹
+    ports:
+      - 7878:7878
+ 
+ 
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:develop
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=1026 # 注意替换
+      - PGID=100  # 注意替换
+      - TZ=Asia/Shanghai
+      - LANG=zh_CN.UTF-8
+      - LANGUAGE=zh_CN.UTF-8
+    volumes:
+      - ./sonarr:/config
+      - /volume2:/volume1 # 注意这里不再是下载文件夹，需要是下载/电影/剧集文件夹的母文件夹
+    ##  - /volume1:/volume1 # 注意这里不再是下载文件夹，需要是下载/电影/剧集文件夹的母文件夹
+    ports:
+      - 8989:8989
+    
+  # lidarr:
+  #   image: linuxserver/lidarr:latest
+  #   container_name: lidarr
+  #   restart: unless-stopped
+  #   environment:
+  #     - PUID=1026
+  #     - PGID=100
+  #     - TZ=Asia/Shanghai
+  #   volumes:
+  #     - ./lidarr:/config
+  #     - /volume2:/volume1 # 注意这里不再是下载文件夹，需要是下载/电影/剧集文件夹的母文件夹
+  #   ports:
+  #     - 8686:8686     
+      
+  chinesesubfinder:
+    image: allanpk716/chinesesubfinder:latest
+    network_mode: bridge
+    hostname: chinesesubfinder
+    container_name: chinesesubfinder
+    restart: always
+    environment:
+      - PUID=1026         # uid
+      - PGID=100          # gid
+      - PERMS=true        # 是否重设/media权限
+      - TZ=Asia/Shanghai  # 时区
+      - UMASK=022         # 权限掩码
+    volumes:
+      - ./chinesesubfinder:/config
+      - /volume2/data/Movies:/media/Movies
+      - /volume2/data/Series:/media/Series      
+    ports:
+      - 19035:19035  # 从0.20.0版本开始，通过webui来设置
+      - 19037:19037  # webui 的视频列表读取图片用，务必设置不要暴露到外网
+    logging:
+        driver: "json-file"
+        options:
+          max-size: "100m" # 限制docker控制台日志大小，可自行调整
+            
+      
+  # bazarr:
+  #   image: linuxserver/bazarr:latest
+  #   container_name: bazarr
+  #   restart: unless-stopped
+  #   environment:
+  #     - PUID=1026 # 注意替换
+  #     - PGID=100  # 注意替换
+  #     - TZ=Asia/Shanghai
+  #   volumes:
+  #     - ./bazarr:/config
+  #     - /volume1/data/Movies:/volume1/data/Movies     # 替换成你自己的电影文件夹
+  #     - /volume1/data/Series:/volume1/data/Series     # 替换成你自己的剧集文件夹
+  #   ports:
+  #     - 6767:6767
+
+  # calibre-web:
+  #   image: lscr.io/linuxserver/calibre-web:latest
+  #   container_name: calibre-web
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Europe/London
+  #     - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
+  #     - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional
+  #   volumes:
+  #     - /path/to/data:/config
+  #     - /path/to/calibre/library:/books
+  #   ports:
+  #     - 8083:8083
+  #   restart: unless-stopped
+  reader:
+    image: hectorqin/reader
+    #image: hectorqin/reader:openj9-latest #docker镜像，arm64架构或小内存机器优先使用此镜像.启用需删除上一行
+    container_name: reader #容器名 可自行修改
+    restart: always
+    ports:
+      - 4396:8080 #4396端口映射可自行修改
+    #networks:
+    #  - bridge
+    volumes:
+      - ./reader/logs:/logs #log映射目录 /home/reader/logs 映射目录可自行修改
+      - ./reader/storage:/storage #数据映射目录 /home/reader/storage 映射目录可自行修改
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - READER_APP_USERLIMIT=50 #用户上限,默认50
+      - READER_APP_USERBOOKLIMIT=200 #用户书籍上限,默认200
+      - READER_APP_CACHECHAPTERCONTENT=true #开启缓存章节内容 V2.0
+      # 如果启用远程webview，需要取消注释下面的 remote-webview 服务
+      - READER_APP_REMOTEWEBVIEWAPI=http://remote-webview:8050 #开启远程webview
+      # 下面都是多用户模式配置
+      - READER_APP_SECURE=true #开启登录鉴权，开启后将支持多用户模式
+      - READER_APP_SECUREKEY=bboomm///  #管理员密码  建议修改
+      #- READER_APP_INVITECODE=registercode #注册邀请码 建议修改,如不需要可注释或删除
+      - HTTP_PROXY=http://192.168.2.3:7893/
+      - HTTPS_PROXY=http://192.168.2.3:7893/
+
+  remote-webview:
+    image: hectorqin/remote-webview
+    container_name: remote-webview #容器名 可自行修改
+    restart: always
+    ports:
+      - 8050:8050
